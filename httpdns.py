@@ -11,6 +11,7 @@ class httpdns(object):
     def __init__(self, ednsip, ttl=300):
         self.domain=''
         self.ednsip=ednsip
+        print(ednsip)
         self.ANCOUNT=0
         self.TTL=(ttl).to_bytes(4, byteorder='big')
         self.answer=b''
@@ -236,7 +237,8 @@ class udpdnsserver(object):
 
 if __name__ == '__main__':
     localserver=udpdnsserver(addr='0.0.0.0')
-    dnspod=httpdns(ednsip='211.140.188.188')
+    myednsip=socket.gethostbyname('myddnsdomainname')
+    dnspod=httpdns(ednsip=myednsip)
     ipprefix=iptool()
     while 1:
         Rcode, Qdata=localserver.input()
