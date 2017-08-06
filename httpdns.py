@@ -4,14 +4,16 @@
 #dnspod httpdns proxy
 #Only supported TYPE A Class IN Standard query
 
-import urllib.request, socket
+import urllib.request, socket, time, ipaddress
+from time import gmtime, strftime
 
 class httpdns(object):
 
     def __init__(self, ednsip, ttl=300):
         self.domain=''
         self.ednsip=ednsip
-        print(ednsip)
+        refreshtimestamp=strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        print("\n------ %s ip refresh ------\n%s\n------ %s ip refresh ------\n" %(refreshtimestamp, ednsip, refreshtimestamp))
         self.ANCOUNT=0
         self.TTL=(ttl).to_bytes(4, byteorder='big')
         self.answer=b''
@@ -237,16 +239,27 @@ class udpdnsserver(object):
 
 if __name__ == '__main__':
     localserver=udpdnsserver(addr='0.0.0.0')
-    myednsip=socket.gethostbyname('myddnsdomainname')
-    dnspod=httpdns(ednsip=myednsip)
-    ipprefix=iptool()
+    myednsip='211.138.113.115' # A default edns ip address.
     while 1:
-        Rcode, Qdata=localserver.input()
-        if Rcode:
-            pass #localserver.output(Rcode, Rdata=Qdata)
-        else:
-            ANCOUNT, Rdata, tmp=dnspod.httprequest(Qdata)
-            if ANCOUNT and ipprefix.prefixmatch(tmp[0]):
-                localserver.output(Rcode, Rdata, ANCOUNT)
-            else:
+        myednsipnew=socket.gethostbyname('www.baidu.com') # Your own ddns domain.
+        try:
+            ipaddress.ip_address(myednsipnew)
+            myednsip=myednsipnew
+        except ValueError:
+            refreshtimestamp=strftime("%Y-%m-%d %H:%M:%S", gmtime())
+            print("\n------ %s Wrong edns ip ------\n%s\n------ %s Wrong edns ip ------\n" %(refreshtimestamp, myednsipnew, refreshtimestamp))
+
+        dnspod=httpdns(ednsip=myednsip)
+        ipprefix=iptool()
+
+        refreshipStartTime = time.time()
+        while time.time() - refreshipStartTime < 60*30: # The duration of refreshing edns ip.
+            Rcode, Qdata=localserver.input()
+            if Rcode:
                 pass #localserver.output(Rcode, Rdata=Qdata)
+            else:
+                ANCOUNT, Rdata, tmp=dnspod.httprequest(Qdata)
+                if ANCOUNT and ipprefix.prefixmatch(tmp[0]):
+                    localserver.output(Rcode, Rdata, ANCOUNT)
+                else:
+                    pass #localserver.output(Rcode, Rdata=Qdata)
